@@ -1,8 +1,23 @@
 import pygame
 from pygame.locals import *
+import xml.dom.minidom
+
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
+
+
+class GameFile:
+    def __init__(self, filepath):
+        self.doc = xml.dom.minidom.parse(filepath)
+        self.sets = self.doc.getElementsByTagName('set')
+
+    def getSetByNumber(self, number):
+        for element in self.sets:
+            if int(element.attributes['number'].value) == number:
+                return element.getElementsByTagName('choice')
+
+        return None
 
 
 class Choice:
@@ -14,9 +29,25 @@ class Choice:
         print(self.number)
 
 
-class Option(pygame.sprite.Sprite):
+class GameStore:
+    def __init__(self, gameFile):
+        self.gameFile = gameFile
+
+    def getChoicesByNumber(self, number):
+        xmlChoices = self.gameFile.getSetByNumber(number)
+        choiceList = []
+        i = 1
+        for xmlChoice in xmlChoices:
+            print(xmlChoice.childNodes)
+            choiceList.append(Choice(i, xmlChoice.childNodes[0].nodeValue))
+            i += 1
+
+        return choiceList
+
+
+class OptionSprite(pygame.sprite.Sprite):
     def __init__(self, x, y, choice, font):
-        super(Option, self).__init__()
+        super(OptionSprite, self).__init__()
         self.surf = pygame.Surface((200, 50))
         self.rect = self.surf.get_rect()
         self.rect.x = x
@@ -34,13 +65,15 @@ optionFont = pygame.font.SysFont('Comic Sans MS', 25)
 background = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
 background.fill((0, 0, 0))
 
-choices = [Choice(1, "nix tun"), Choice(2, "was tun"), Choice(3, "irgendwas tun")]
+gameStore = GameStore(GameFile('choices.xml'))
+
+choices = gameStore.getChoicesByNumber(1)
 
 options = pygame.sprite.Group()
 optionY = 100
 choiceNumber = 0
 for choice in choices:
-    option = Option(100, optionY, choices[choiceNumber], optionFont)
+    option = OptionSprite(100, optionY, choices[choiceNumber], optionFont)
     options.add(option)
     optionY += 75
     choiceNumber += 1
@@ -62,7 +95,7 @@ while running:
             elif e.key == K_UP:
                 activeOptionCounter -= 1
             elif e.key == K_RETURN:
-                chooseOption(activeOptionCounter % numberOfOptions + 1)
+                choices[activeOptionCounter % numberOfOptions].choose()
         elif e.type == QUIT:
             running = False
 
