@@ -5,6 +5,7 @@ import xml.dom.minidom
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
+newChoiceEvent = pygame.USEREVENT + 1
 
 
 class GameFile:
@@ -14,7 +15,7 @@ class GameFile:
 
     def getSetByNumber(self, number):
         for element in self.sets:
-            if int(element.attributes['number'].value) == number:
+            if int(element.attributes['number'].value) == int(number):
                 return element.getElementsByTagName('choice')
 
         return None
@@ -26,7 +27,7 @@ class Choice:
         self.text = text
 
     def choose(self):
-        print(self.number)
+        pygame.event.post(pygame.event.Event(newChoiceEvent, {'newNumber': self.number}))
 
 
 class GameStore:
@@ -36,24 +37,35 @@ class GameStore:
     def getChoicesByNumber(self, number):
         xmlChoices = self.gameFile.getSetByNumber(number)
         choiceList = []
-        i = 1
         for xmlChoice in xmlChoices:
-            print(xmlChoice.childNodes)
-            choiceList.append(Choice(i, xmlChoice.childNodes[0].nodeValue))
-            i += 1
+            choiceList.append(Choice(xmlChoice.attributes['next'].value, xmlChoice.childNodes[0].nodeValue))
 
         return choiceList
 
 
 class OptionSprite(pygame.sprite.Sprite):
-    def __init__(self, x, y, choice, font):
+    def __init__(self, x, y, choice, font, number):
         super(OptionSprite, self).__init__()
         self.surf = pygame.Surface((200, 50))
         self.rect = self.surf.get_rect()
         self.rect.x = x
         self.rect.y = y
-        self.number = choice.number
+        self.choice = choice
         self.textsurface = font.render(choice.text, False, (0, 0, 0))
+        self.number = number
+
+
+def makeOptionFromChoices(choices):
+    options = pygame.sprite.Group()
+    optionY = 100
+    choiceNumber = 0
+    for choice in choices:
+        option = OptionSprite(100, optionY, choices[choiceNumber], optionFont, choiceNumber + 1)
+        options.add(option)
+        optionY += 75
+        choiceNumber += 1
+
+    return options
 
 
 pygame.init()
@@ -69,15 +81,7 @@ gameStore = GameStore(GameFile('choices.xml'))
 
 choices = gameStore.getChoicesByNumber(1)
 
-options = pygame.sprite.Group()
-optionY = 100
-choiceNumber = 0
-for choice in choices:
-    option = OptionSprite(100, optionY, choices[choiceNumber], optionFont)
-    options.add(option)
-    optionY += 75
-    choiceNumber += 1
-
+options = makeOptionFromChoices(choices)
 numberOfOptions = len(options.sprites())
 activeOptionCounter = numberOfOptions
 
@@ -95,9 +99,15 @@ while running:
             elif e.key == K_UP:
                 activeOptionCounter -= 1
             elif e.key == K_RETURN:
-                choices[activeOptionCounter % numberOfOptions].choose()
+                for option in options:
+                    if option.number == activeOptionCounter % numberOfOptions + 1:
+                        option.choice.choose()
         elif e.type == QUIT:
             running = False
+        elif e.type == newChoiceEvent:
+            options = makeOptionFromChoices(gameStore.getChoicesByNumber(e.newNumber))
+            numberOfOptions = len(options.sprites())
+            activeOptionCounter = numberOfOptions
 
     screen.blit(background, (0, 0))
 

@@ -1,12 +1,17 @@
 <choices>
     <set number="1">
         <choice next="2" points="4">Nix tun</choice>
-        <choice next="2" points="5">"Was tun</choice>
-        <choice next="2" points="6">Was anderes tun</choice>
+        <choice next="2" points="5">Was tun</choice>
+        <choice next="3" points="6">Was anderes tun</choice>
     </set>
     <set number="2">
         <choice next="1" points="4">Nix tun</choice>
-        <choice next="1" points="5">"Was tun</choice>
-        <choice next="1" points="6">Was anderes tun</choice>
+        <choice next="1" points="5">Was neues tun</choice>
+        <choice next="3" points="6">Was ganz anderes tun</choice>
+    </set>
+    <set number="3">
+        <choice next="1" points="4">3 Nix tun</choice>
+        <choice next="2" points="5">3 Was neues tun</choice>
+        <choice next="2" points="6">3Was ganz anderes tun</choice>
     </set>
 </choices>
