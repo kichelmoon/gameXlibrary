@@ -22,12 +22,13 @@ class Choice:
     :type choice_type: int
     :type description: str
     :type effect: Effect
+    :type condition: dict
     """
-
-    def __init__(self, choice_type, description, effect):
+    def __init__(self, choice_type, description, effect, condition=None):
         self.type = choice_type
         self.description = description
         self.effect = effect
+        self.condition = condition
 
     def choose(self, player):
         """
@@ -49,16 +50,23 @@ class ChoiceSlot:
         """
         self.choices.append(choice)
 
-    def get_choice(self):
-        return self.choices[0]
+    def get_choice(self, player):
+        i = 0
+        while True:
+            choice = self.choices[i]
+            if choice.type is CHOICE_TYPE_IF and not choice.condition.items() <= player.states.items():
+                i += 1
+            else:
+                return self.choices[i]
 
     def choose(self, player):
         """
         :type player: Player
         """
-        self.choices[0].choose(player)
-        if self.choices[0].type is not CHOICE_TYPE_PERMANENT:
-            self.choices.pop(0)
+        choice = self.get_choice(player)
+        choice.choose(player)
+        if choice.type is not CHOICE_TYPE_PERMANENT:
+            self.choices.remove(choice)
 
 
 class Node:
@@ -82,16 +90,32 @@ class Player:
 
 
 the_player = Player("Testo der Clown")
+the_player.states["Nase"] = "Verstopft"
 
 start_node = Node("Start")
+
 choice_slot1 = ChoiceSlot()
 choice_slot1.add_choice(Choice(CHOICE_TYPE_ONCE, "In der Nase bohren", Effect("Das war... nutzlos", {"Nase": "frei"}, "Start")))
 choice_slot1.add_choice(Choice(CHOICE_TYPE_PERMANENT, "Warten", Effect("Und wieder verstopft", {"Nase": "verstopft"}, "Start")))
 start_node.choice_slots.append(choice_slot1)
 
-print(start_node.choice_slots[0].get_choice().description)
+choice_slot2 = ChoiceSlot()
+choice_slot2.add_choice(Choice(CHOICE_TYPE_IF, "Freuen", Effect("Hurra, eine freie Nase!", {}, "Start"), {"Nase": "frei"}))
+choice_slot2.add_choice(Choice(CHOICE_TYPE_PERMANENT, "Weinen", Effect("Ich bin immer traurig", {}, "Start")))
+start_node.choice_slots.append(choice_slot2)
+
+print(start_node.choice_slots[1].get_choice(the_player).description)
+start_node.choice_slots[1].choose(the_player)
+print("Status Nase:" + the_player.states["Nase"])
+
+print(start_node.choice_slots[0].get_choice(the_player).description)
 start_node.choice_slots[0].choose(the_player)
 print("Status Nase:" + the_player.states["Nase"])
-print(start_node.choice_slots[0].get_choice().description)
+
+print(start_node.choice_slots[1].get_choice(the_player).description)
+start_node.choice_slots[1].choose(the_player)
+print("Status Nase:" + the_player.states["Nase"])
+
+print(start_node.choice_slots[0].get_choice(the_player).description)
 start_node.choice_slots[0].choose(the_player)
 print("Status Nase:" + the_player.states["Nase"])
